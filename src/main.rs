@@ -1,3 +1,7 @@
+mod parser;
+mod gen;
+
 fn main() {
-    println!("Hello, world!");
+    parser::parse_and_print();
+    gen::write_wav();
 }
