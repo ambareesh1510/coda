@@ -142,8 +142,6 @@ fn parse_declaration(input: &str) -> IResult<&str, Statement> {
         parse_pattern
     )(input)?;
 
-    //vars.insert(result.1.0.to_owned(), result.1.1);
-
     Ok((result.0, Statement::Declaration {
         name: result.1.0.to_owned(),
         value: result.1.1
@@ -154,8 +152,18 @@ fn parse_function(input: &str) -> IResult<&str, Statement> {
     unimplemented!()
 }
 
+fn parse_function_matrix(input: &str) -> IResult<&str, String> {
+    let result = delimited(
+        tuple((tag("["), multispace0)),
+        alphanumeric1,
+        tuple((tag("]"), multispace0)),
+    )(input)?;
+
+    Ok((result.0, result.1.to_owned()))
+}
+
 pub fn parse_and_print() {
-    let variables = HashMap::<String, Pattern>::new();
+    let mut variables = HashMap::<String, Pattern>::new();
     let functions = HashMap::<String, Pattern>::new();
     let syn_file = std::fs::read_to_string("test/test.syn").unwrap();
     let statements = many0(alt((
@@ -167,5 +175,17 @@ pub fn parse_and_print() {
 
     for statement in statements.1 {
         println!("{:?}", statement);
+        match statement {
+            Statement::Declaration { name, value } =>  {
+                if !variables.contains_key(&name) {
+                    variables.insert(name, value);
+                } else {
+                    println!("Variable already exists!");
+                }
+            }
+            _ => ()
+        };
     }
+
+    println!("{:?}", variables);
 }
