@@ -1,6 +1,7 @@
 mod parser;
 mod lexer;
 mod gen;
+mod repl;
 
 use std::io::{self, Write};
 
@@ -16,8 +17,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
         let tokens = lexer::Parser::tokenize(&input);
-        println!("{:?}", tokens);
-        println!("{:?}", lexer::Parser::construct_ast(&tokens));
+        let (atoms, _) = lexer::Parser::construct_ast(&tokens);
+        for atom in atoms {
+            println!("{:?}", atom.eval());
+        }
     }
     /*
     let a = Atom::List(vec![
