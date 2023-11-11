@@ -1,6 +1,6 @@
+use std::f32::consts::PI;
 use std::fs::File;
 use std::path::Path;
-use std::f32::consts::PI;
 
 pub fn write_wav() {
     let mut inp_file = File::open(Path::new("test/audio/sine.wav")).unwrap();

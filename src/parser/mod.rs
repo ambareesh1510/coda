@@ -1,7 +1,7 @@
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_till, take_until, take_while, tag_no_case};
-use nom::character::complete::{multispace0, multispace1, digit0, digit1, u16};
+use nom::bytes::complete::{tag, tag_no_case, take_till, take_until, take_while};
 use nom::character::complete::{alpha1, alphanumeric1, line_ending};
+use nom::character::complete::{digit0, digit1, multispace0, multispace1, u16};
 use nom::character::{is_alphanumeric, is_newline};
 use nom::combinator::opt;
 use nom::multi::many0;
@@ -84,17 +84,12 @@ fn parse_note(input: &str) -> IResult<&str, Note> {
             tag_no_case("a"),
             tag_no_case("b"),
         )),
-        opt(alt((
-            tag("##"),
-            tag("bb"),
-            tag("#"),
-            tag("b")),
-        )),
+        opt(alt((tag("##"), tag("bb"), tag("#"), tag("b")))),
         opt(u16),
         opt(preceded(tag(":"), float)),
     ))(input)?;
 
-    let pitch = match result.1.0.to_lowercase().as_str() {
+    let pitch = match result.1 .0.to_lowercase().as_str() {
         "c" => Pitch::C,
         "d" => Pitch::D,
         "e" => Pitch::E,
@@ -102,50 +97,57 @@ fn parse_note(input: &str) -> IResult<&str, Note> {
         "g" => Pitch::G,
         "a" => Pitch::A,
         "b" => Pitch::B,
-        _ => panic!("Unrecognized pitch")
+        _ => panic!("Unrecognized pitch"),
     };
 
-    let intonation = match result.1.1 {
+    let intonation = match result.1 .1 {
         None => Intonation::None,
         Some(i) => match i {
             "##" => Intonation::DoubleSharp,
             "bb" => Intonation::DoubleFlat,
             "#" => Intonation::Sharp,
             "b" => Intonation::Flat,
-            _ => panic!("Unrecognized intonation")
-        }
+            _ => panic!("Unrecognized intonation"),
+        },
     };
 
-    let octave = result.1.2;
-    
-    let duration = result.1.3.unwrap_or(1.0f32);
+    let octave = result.1 .2;
+
+    let duration = result.1 .3.unwrap_or(1.0f32);
 
     Ok((result.0, Note(pitch, intonation, octave, duration)))
 }
 
 fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
-    let result = delimited(tag("{"), many0(delimited(multispace0, parse_note, multispace0)), tag("}"))(input)?;
-    Ok((result.0, Pattern {
-        tempo: 60.0f32,
-        base: 4,
-        notes: result.1,
-    }))
+    let result = delimited(
+        tag("{"),
+        many0(delimited(multispace0, parse_note, multispace0)),
+        tag("}"),
+    )(input)?;
+    Ok((
+        result.0,
+        Pattern {
+            tempo: 60.0f32,
+            base: 4,
+            notes: result.1,
+        },
+    ))
 }
 
 fn parse_declaration(input: &str) -> IResult<&str, Statement> {
     let result = separated_pair(
-        preceded(
-            tuple((tag("let"), multispace0)),
-            alphanumeric1,
-        ),
+        preceded(tuple((tag("let"), multispace0)), alphanumeric1),
         tuple((multispace0, tag("="), multispace0)),
-        parse_pattern
+        parse_pattern,
     )(input)?;
 
-    Ok((result.0, Statement::Declaration {
-        name: result.1.0.to_owned(),
-        value: result.1.1
-    }))
+    Ok((
+        result.0,
+        Statement::Declaration {
+            name: result.1 .0.to_owned(),
+            value: result.1 .1,
+        },
+    ))
 }
 
 fn parse_function(input: &str) -> IResult<&str, Statement> {
@@ -171,19 +173,20 @@ pub fn parse_and_print() {
         parse_multi_line_comment,
         parse_declaration,
         parse_blank_line,
-    )))(&syn_file).unwrap();
+    )))(&syn_file)
+    .unwrap();
 
     for statement in statements.1 {
         println!("{:?}", statement);
         match statement {
-            Statement::Declaration { name, value } =>  {
+            Statement::Declaration { name, value } => {
                 if !variables.contains_key(&name) {
                     variables.insert(name, value);
                 } else {
                     println!("Variable already exists!");
                 }
             }
-            _ => ()
+            _ => (),
         };
     }
 
