@@ -145,7 +145,6 @@ impl Atom {
                                         });
                                         println!("{:?}", env.symbol_table.get(&fn_name));
                                         Atom::String("".into())
-                                        // todo!()
                                     }
                                     _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2, found {})", items.len() - 1)),
                                 }
@@ -153,6 +152,9 @@ impl Atom {
                             other => {
                                 match env.symbol_table.get(other) {
                                     Some(symbol_def) => {
+                                        if items.len() - 1 != symbol_def.args.len() {
+                                            return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected {}, found {})", symbol_def.args.len(), items.len() - 1));
+                                        }
                                         symbol_def.eval.substitute_args(items).eval(env)
                                     }
                                     None => Atom::Error(format!("Function `{name}` not found")),
@@ -193,6 +195,9 @@ impl Atom {
             Atom::List(list_items) => {
                 let mut return_items = vec![];
                 for item in list_items  {
+                    if let Atom::Error(_) = item.parse_args(env) {
+                        return item.parse_args(env);
+                    }
                     return_items.push(item.parse_args(env));
                 }
                 Atom::List(return_items)
