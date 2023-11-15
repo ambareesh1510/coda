@@ -3,7 +3,13 @@ use std::collections::HashMap;
 
 pub struct Env {
     pub ast: Vec<Atom>,
-    pub symbol_table: HashMap<String, Atom>,
+    pub symbol_table: HashMap<String, SymbolDef>,
+}
+
+#[derive(Clone, Debug)]
+pub struct SymbolDef {
+    pub args: HashMap<String, SymbolDef>,
+    pub eval: Atom,
 }
 
 impl Env {

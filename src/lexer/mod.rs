@@ -1,4 +1,5 @@
-use crate::env::Env;
+use std::collections::HashMap;
+use crate::env::{Env, SymbolDef};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Status {
@@ -18,6 +19,7 @@ pub enum Atom {
     List(Vec<Atom>),
     Error(String),
     StatusMsg(Status),
+    Arg(usize),
 }
 
 impl Atom {
@@ -102,28 +104,121 @@ impl Atom {
                                     items[3].eval(env)
                                 }
                             }
-                            "defvar" => {
-                                if items.len() != 3 {
-                                    return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2, found {})", items.len() - 1));
+                            "def" => {
+                                match items.len() {
+                                    3 => {
+                                        let Atom::Symbol(var_name) = items[1].clone() else {
+                                            return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Symbol"));
+                                        };
+                                        let var_value = items[2].eval(env);
+                                        env.symbol_table.insert(var_name, SymbolDef {
+                                            args: HashMap::new(),
+                                            eval: var_value,
+                                        });
+                                        items[2].eval(env)
+                                    },
+                                    4 => {
+                                        let Atom::Symbol(fn_name) = items[1].clone() else {
+                                            return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Symbol"));
+                                        };
+                                        let Atom::List(args) = items[2].clone() else {
+                                            return Atom::Error(format!("Argument 2 of `{name}` has incorrect type: expected List"));
+                                        };
+                                        let mut args_map = HashMap::new();
+                                        for arg in args {
+                                            let arg_number = args_map.len();
+                                            let Atom::Symbol(arg_name) = arg else {
+                                                return Atom::Error(format!("Expected Symbols in parameter list of `{name}`"));
+                                            };
+                                            args_map.insert(arg_name, SymbolDef {
+                                                args: HashMap::new(),
+                                                eval: Atom::Arg(arg_number),
+                                            });
+                                        }
+                                        let fn_eval = items[3].parse_args(&mut Env {
+                                            ast: vec![],
+                                            symbol_table: args_map.clone(),
+                                        });
+                                        env.symbol_table.insert(fn_name.clone(), SymbolDef {
+                                            args: args_map,
+                                            eval: fn_eval,
+                                        });
+                                        println!("{:?}", env.symbol_table.get(&fn_name));
+                                        Atom::String("".into())
+                                        // todo!()
+                                    }
+                                    _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2, found {})", items.len() - 1)),
                                 }
-                                let Atom::Symbol(var_name) = items[1].clone() else {
-                                    return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Symbol"));
-                                };
-                                let var_value = items[2].eval(env);
-                                env.symbol_table.insert(var_name, var_value);
-                                items[2].eval(env)
                             }
-                            _ => Atom::Error(format!("Function `{name}` not found")),
+                            other => {
+                                match env.symbol_table.get(other) {
+                                    Some(symbol_def) => {
+                                        symbol_def.eval.substitute_args(items).eval(env)
+                                    }
+                                    None => Atom::Error(format!("Function `{name}` not found")),
+                                }
+                            }
                         }
                     }
                     _ => self.clone(),
                 }
             }
             Self::Symbol(name) => match env.symbol_table.get(name) {
-                Some(atom) => atom.clone(),
+                Some(symbol_def) => match symbol_def.args.len() {
+                    0 => return symbol_def.eval.clone(),
+                    _ => todo!(),
+                },
                 None => Atom::Error(format!("Symbol `{name}` not found")), // lookup in symbol table
             },
             _ => self.clone(),
+        }
+    }
+
+    pub fn substitute_args(&self, args: &Vec<Atom>) -> Self {
+        match self {
+            Atom::List(list_items) => {
+                let mut return_items = vec![];
+                for item in list_items  {
+                    return_items.push(item.substitute_args(args));
+                }
+                Atom::List(return_items)
+            }
+            Atom::Arg(arg_num) => args[arg_num + 1].clone(),
+            other => other.clone()
+        }
+    }
+
+    pub fn parse_args(&self, env: &Env) -> Self {
+        match self {
+            Atom::List(list_items) => {
+                let mut return_items = vec![];
+                for item in list_items  {
+                    return_items.push(item.parse_args(env));
+                }
+                Atom::List(return_items)
+            }
+            Atom::Symbol(name) if !self.is_reserved_keyword() => {
+                match env.symbol_table.get(name) {
+                    Some(symbol_def) => match symbol_def.args.len() {
+                        0 => symbol_def.eval.clone(),
+                        _ => todo!("Sub-functions, e.g. define function where temporary variables within function = ..."),
+                    }, 
+                    None => Atom::Error(format!("Argument `{name}` not found")),
+                }
+            }
+            other => other.clone()
+        }
+    }
+
+    pub fn is_reserved_keyword(&self) -> bool {
+        let Atom::Symbol(name) = self else {
+            return false;
+        };
+        match name.as_str() {
+            "+" | "-" | "*" | "/"
+                | "sin" | "cos" | "tan"
+                | "equals" | "if" | "def" => true,
+            _ => false,
         }
     }
 
