@@ -7,9 +7,6 @@ pub enum Status {
     LoadModule(String),
 }
 
-// strategy for processing functions:
-// traverse ast, make hashmap of function name to defun node
-// create eval method for atom that takes an optional vec of args
 #[derive(Debug, Clone, PartialEq)]
 pub enum Atom {
     Number(f32),
@@ -226,16 +223,5 @@ impl Atom {
             _ => false,
         }
     }
-
-    pub fn is_same_type(&self, other: &Self) -> bool {
-        let self_type = std::mem::discriminant(self);
-        let other_type = std::mem::discriminant(other);
-        self_type == other_type
-    }
-}
-
-pub struct Arg {
-    identifier: String,
-    arg_type: Atom,
 }
 
