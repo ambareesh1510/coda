@@ -1,7 +1,6 @@
 mod env;
 mod gen;
 mod lexer;
-mod parser;
 mod repl;
 
 use std::io::{self, Write};
@@ -26,7 +25,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     /*
-    parser::parse_and_print();
     gen::write_wav();
     */
     Ok(())
