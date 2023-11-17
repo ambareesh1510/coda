@@ -10,10 +10,11 @@ use crate::{
     env::Env,
 };
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> io::Result<()> {
     let mut env = Env::new("");
+    let mut cell_count = 0;
     'repl: loop {
-        print!("(repl) > ");
+        print!(">>>>> ");
         io::stdout().flush()?;
         let mut input = String::new();
         io::stdin()
@@ -24,9 +25,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match atom {
                 Atom::StatusMsg(Status::Quit) => break 'repl,
                 Atom::StatusMsg(Status::LoadModule(module_name)) => todo!("Load a module from source file"),
-                _ => println!("{:?}", atom),
+                _ => println!("{: >4}: {:?}", cell_count, atom),
             }
+            cell_count += 1;
         }
+        println!("");
     }
     /*
     gen::write_wav();

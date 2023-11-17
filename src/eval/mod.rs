@@ -17,6 +17,7 @@ pub enum Atom {
     Error(String),
     StatusMsg(Status),
     Arg(usize),
+    None,
 }
 
 impl Atom {
@@ -110,9 +111,9 @@ impl Atom {
                                         let var_value = items[2].eval(env);
                                         env.symbol_table.insert(var_name, SymbolDef {
                                             args: HashMap::new(),
-                                            eval: var_value,
+                                            eval: var_value.clone(),
                                         });
-                                        items[2].eval(env)
+                                        var_value
                                     },
                                     4 => {
                                         let Atom::Symbol(fn_name) = items[1].clone() else {
@@ -133,7 +134,6 @@ impl Atom {
                                             });
                                         }
                                         let fn_eval = items[3].parse_args(&mut Env {
-                                            ast: vec![],
                                             symbol_table: args_map.clone(),
                                         });
                                         env.symbol_table.insert(fn_name.clone(), SymbolDef {
@@ -141,7 +141,7 @@ impl Atom {
                                             eval: fn_eval,
                                         });
                                         println!("{:?}", env.symbol_table.get(&fn_name));
-                                        Atom::String("".into())
+                                        Atom::None
                                     }
                                     _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2, found {})", items.len() - 1)),
                                 }
@@ -165,7 +165,7 @@ impl Atom {
             Self::Symbol(name) => match env.symbol_table.get(name) {
                 Some(symbol_def) => match symbol_def.args.len() {
                     0 => return symbol_def.eval.clone(),
-                    _ => todo!(),
+                    _ => todo!("Functions are not yet supported as first-class objects"),
                 },
                 None => Atom::Error(format!("Symbol `{name}` not found")), // lookup in symbol table
             },
