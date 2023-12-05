@@ -1,5 +1,5 @@
+use crate::env::SymbolDef;
 use std::collections::HashMap;
-use crate::env::{Env, SymbolDef};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Status {
@@ -21,14 +21,21 @@ pub enum Atom {
 }
 
 impl Atom {
-    pub fn eval(&self, env: &mut Env) -> Self {
+    pub fn eval(&self, env: &mut HashMap<String, SymbolDef>) -> Self {
         match self {
             Self::List(items) => {
                 match items[0] {
                     Self::Symbol(ref name) => {
                         match name.as_str() {
-                            // TODO: deal with case where variable is first entry of list, and
-                            // therefore gets parsed as a function
+                            // TODO: variables not inside lists work erratically
+                            // For example:
+                            // (def a 1)
+                            // (def b a) ==> works
+                            // (def b (a)) ==> intended, also works
+                            //
+                            // (def a 1)
+                            // (a 1 2) ==> doesn't work
+                            // ((a) 1 2) ==> intended, works
                             "quit" => {
                                 return Atom::StatusMsg(Status::Quit);
                             }
@@ -109,7 +116,7 @@ impl Atom {
                                             return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Symbol"));
                                         };
                                         let var_value = items[2].eval(env);
-                                        env.symbol_table.insert(var_name, SymbolDef {
+                                        env.insert(var_name, SymbolDef {
                                             args: HashMap::new(),
                                             eval: var_value.clone(),
                                         });
@@ -133,21 +140,19 @@ impl Atom {
                                                 eval: Atom::Arg(arg_number),
                                             });
                                         }
-                                        let fn_eval = items[3].parse_args(&mut Env {
-                                            symbol_table: args_map.clone(),
-                                        });
-                                        env.symbol_table.insert(fn_name.clone(), SymbolDef {
+                                        let fn_eval = items[3].parse_args(&args_map);
+                                        env.insert(fn_name.clone(), SymbolDef {
                                             args: args_map,
                                             eval: fn_eval,
                                         });
-                                        println!("{:?}", env.symbol_table.get(&fn_name));
+                                        // println!("{:?}", env.get(&fn_name));
                                         Atom::None
                                     }
                                     _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2, found {})", items.len() - 1)),
                                 }
                             }
                             other => {
-                                match env.symbol_table.get(other) {
+                                match env.get(other) {
                                     Some(symbol_def) => {
                                         if items.len() - 1 != symbol_def.args.len() {
                                             return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected {}, found {})", symbol_def.args.len(), items.len() - 1));
@@ -159,13 +164,19 @@ impl Atom {
                             }
                         }
                     }
-                    _ => self.clone(),
+                    _ => {
+                        let mut return_vec = Vec::<Atom>::new();
+                        for item in items {
+                            return_vec.push(item.eval(env));
+                        }
+                        return Atom::List(return_vec);
+                    }
                 }
             }
-            Self::Symbol(name) => match env.symbol_table.get(name) {
+            Self::Symbol(name) => match env.get(name) {
                 Some(symbol_def) => match symbol_def.args.len() {
-                    0 => return symbol_def.eval.clone(),
-                    _ => todo!("Functions are not yet supported as first-class objects"),
+                    // 0 => return symbol_def.eval.clone(),
+                    _ => Atom::Error(format!("Functions are not yet supported as first-class objects")),
                 },
                 None => Atom::Error(format!("Symbol `{name}` not found")), // lookup in symbol table
             },
@@ -177,17 +188,17 @@ impl Atom {
         match self {
             Atom::List(list_items) => {
                 let mut return_items = vec![];
-                for item in list_items  {
+                for item in list_items {
                     return_items.push(item.substitute_args(args));
                 }
                 Atom::List(return_items)
             }
             Atom::Arg(arg_num) => args[arg_num + 1].clone(),
-            other => other.clone()
+            other => other.clone(),
         }
     }
 
-    pub fn parse_args(&self, env: &Env) -> Self {
+    pub fn parse_args(&self, env: &HashMap<String, SymbolDef>) -> Self {
         match self {
             Atom::List(list_items) => {
                 let mut return_items = vec![];
@@ -200,7 +211,7 @@ impl Atom {
                 Atom::List(return_items)
             }
             Atom::Symbol(name) if !self.is_reserved_keyword() => {
-                match env.symbol_table.get(name) {
+                match env.get(name) {
                     Some(symbol_def) => match symbol_def.args.len() {
                         0 => symbol_def.eval.clone(),
                         _ => todo!("Sub-functions, e.g. define function where temporary variables within function = ..."),
@@ -217,11 +228,8 @@ impl Atom {
             return false;
         };
         match name.as_str() {
-            "+" | "-" | "*" | "/"
-                | "sin" | "cos" | "tan"
-                | "equals" | "if" | "def" => true,
+            "+" | "-" | "*" | "/" | "sin" | "cos" | "tan" | "equals" | "if" | "def" => true,
             _ => false,
         }
     }
 }
-

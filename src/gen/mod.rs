@@ -2,9 +2,9 @@ use std::f32::consts::PI;
 use std::fs::File;
 use std::path::Path;
 
-pub fn write_wav() {
+pub fn _write_wav() {
     let mut inp_file = File::open(Path::new("test/audio/sine.wav")).unwrap();
-    let (header, data) = wav::read(&mut inp_file).unwrap();
+    let (header, _data) = wav::read(&mut inp_file).unwrap();
     println!("{:?}", header);
 
     let mut out_file = File::create(Path::new("test/audio/output.wav")).unwrap();
