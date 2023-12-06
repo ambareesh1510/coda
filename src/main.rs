@@ -1,33 +1,20 @@
 mod env;
-mod gen;
 mod eval;
+mod gen;
 mod repl;
 
-use std::io::{self, Write};
+use std::io;
+use std::env::args;
+use repl::repl;
 
-use crate::{
-    eval::{Atom, Status},
-    env::Env,
-};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut env = Env::new("");
-    'repl: loop {
-        print!("(repl) > ");
-        io::stdout().flush()?;
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("couldn't read input");
-        let atoms = env.parse_input(&input);
-        for atom in atoms {
-            match atom {
-                Atom::StatusMsg(Status::Quit) => break 'repl,
-                Atom::StatusMsg(Status::LoadModule(module_name)) => todo!("Load a module from source file"),
-                _ => println!("{:?}", atom),
-            }
+fn main() -> io::Result<()> {
+    for (i, arg) in args().enumerate() {
+        if i == 1 {
+            println!("{}", arg);
         }
     }
+    repl()?;
     /*
     gen::write_wav();
     */
