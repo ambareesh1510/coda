@@ -140,7 +140,10 @@ impl Atom {
                                                 eval: Atom::Arg(arg_number),
                                             });
                                         }
-                                        let fn_eval = items[3].parse_args(&args_map);
+                                        let fn_eval = items[3].parse_args(&args_map, env);
+                                        if let Atom::Error(_) = fn_eval {
+                                            return fn_eval;
+                                        }
                                         env.insert(fn_name.clone(), SymbolDef {
                                             args: args_map,
                                             eval: fn_eval,
@@ -198,15 +201,17 @@ impl Atom {
         }
     }
 
-    pub fn parse_args(&self, env: &HashMap<String, SymbolDef>) -> Self {
+    pub fn parse_args(&self, env: &HashMap<String, SymbolDef>, env2: &HashMap<String, SymbolDef>) -> Self {
         match self {
             Atom::List(list_items) => {
                 let mut return_items = vec![];
                 for item in list_items  {
-                    if let Atom::Error(_) = item.parse_args(env) {
-                        return item.parse_args(env);
+                    let parsed_item = item.parse_args(env, env2);
+                    // Propagate errors upward
+                    if let Atom::Error(_) = parsed_item {
+                        return parsed_item;
                     }
-                    return_items.push(item.parse_args(env));
+                    return_items.push(parsed_item);
                 }
                 Atom::List(return_items)
             }
@@ -216,7 +221,13 @@ impl Atom {
                         0 => symbol_def.eval.clone(),
                         _ => todo!("Sub-functions, e.g. define function where temporary variables within function = ..."),
                     }, 
-                    None => Atom::Error(format!("Argument `{name}` not found")),
+                    None => match env2.get(name) {
+                        // Some(symbol_def) => {symbol_def.eval.clone()},
+                        Some(_) => {
+                            self.clone()
+                        },
+                        None => Atom::Error(format!("Argument `{name}` not found")),
+                    }
                 }
             }
             other => other.clone()
