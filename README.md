@@ -1,4 +1,5 @@
-# music stuff
+# Coda
+A scripting language for music synthesis. Work in progress!
 
 ## Building
 With Rust installed, `git clone` this repository; then `cargo r` to build and run the REPL.
