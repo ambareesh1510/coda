@@ -27,15 +27,6 @@ impl Atom {
                 match items[0] {
                     Self::Symbol(ref name) => {
                         match name.as_str() {
-                            // TODO: variables not inside lists work erratically
-                            // For example:
-                            // (def a 1)
-                            // (def b a) ==> works
-                            // (def b (a)) ==> intended, also works
-                            //
-                            // (def a 1)
-                            // (a 1 2) ==> doesn't work
-                            // ((a) 1 2) ==> intended, works
                             "quit" => {
                                 return Atom::StatusMsg(Status::Quit);
                             }

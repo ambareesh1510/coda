@@ -55,7 +55,7 @@ impl fmt::Display for Atom {
         match self {
             Atom::None => { write!(f, "None") }
             Atom::Number(n) => { write!(f, "{}", n) }
-            Atom::Boolean(b) => { if *b == true { write!(f, "true") } else { write!(f, "false") } }
+            Atom::Boolean(b) => { if *b == true { write!(f, "TRUE") } else { write!(f, "FALSE") } }
             Atom::String(s) => { write!(f, "{}", s) }
             Atom::Symbol(s) => { write!(f, "{}", s) }
             Atom::List(items) => {
