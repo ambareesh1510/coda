@@ -73,6 +73,7 @@ pub fn construct_ast(tokens: &[String]) -> (Vec<Atom>, usize) {
             let mut num_chars = 0;
             loop {
                 let next_char = &tokens[token_ptr][num_chars..num_chars + 1];
+                println!("{next_char}");
                 if next_char == ":" {
                     panic!("Failed to parse note");
                 }
@@ -85,6 +86,10 @@ pub fn construct_ast(tokens: &[String]) -> (Vec<Atom>, usize) {
             }
             let mut chars_end = num_chars + 1;
             loop {
+                if note == "R" {
+                    octave = 0;
+                    break;
+                }
                 let next_chars = &tokens[token_ptr][num_chars..chars_end];
                 if let Ok(o) = i32::from_str_radix(next_chars, 10) {
                     octave = o;
@@ -126,7 +131,7 @@ fn calculate_frequency_from_note(note: &String, octave: i32) -> f32 {
         "F#" | "Gb" => -2,
         "G" => -1,
         "G#" | "Ab" => 0,
-        "R" => return 0.,
+        // "R" => return 0.,
         _ => panic!("Error parsing note"),
     };
     key_num += octave as i32 * 12;

@@ -1,7 +1,8 @@
 use crate::env::SymbolDef;
+use crate::gen::write_wav;
 use std::collections::HashMap;
 
-const SAMPLING_RATE: f32 = 44100.;
+pub const SAMPLING_RATE: f32 = 22050.;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Status {
@@ -154,7 +155,7 @@ impl Atom {
                                         let Atom::Number(beat_length) = items[1].clone() else {
                                             return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Number"));
                                         };
-                                        let Atom::List(notes) = items[2].clone() else {
+                                        let Atom::List(notes) = items[2].clone().eval(env) else {
                                             return Atom::Error(format!("Argument 2 of `{name}` has incorrect type: expected List"));
                                         };
                                         let mut notes_raw: Vec<(f32, f32)> = vec![];
@@ -191,41 +192,55 @@ impl Atom {
                                 // (def sin-wave (freq t) (sin (* freq t 2 pi)))
                                 // (map (sin) (notes))
                                 match items.len() {
-                                    3 => {
-                                        let Atom::List(params) = items[1].clone() else {
-                                            return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected List"));
-                                        };
-                                        let Atom::List(frequencies) = items[2].clone().eval(env) else {
+                                    n if n >= 3 => {
+                                        let mut params = vec![];
+                                        for i in 1..n-1 {
+                                            let Atom::List(p) = items[i].clone() else {
+                                                return Atom::Error(format!("Argument {i} of `{name}` has incorrect type: expected List"));
+                                            };
+                                            params.push(p);
+                                        }
+                                        let Atom::List(mut frequencies) = items[n - 1].clone().eval(env) else {
                                             return Atom::Error(format!("Argument 2 of `{name}` has incorrect type: expected List"));
                                         };
-                                        let mut return_frequencies = vec![];
-                                        for (i, f) in frequencies.into_iter().enumerate() {
-                                            let Atom::Number(_) = f else {
-                                                return Atom::Error(format!("Unable to frequency in `{name} (found {f})`"));
-                                            };
-                                            let mut current_params = params.clone();
-                                            current_params.push(f);
-                                            current_params.push(Atom::Number(i as f32 * SAMPLING_RATE));
-                                            return_frequencies.push(Atom::List(current_params).eval(env));
+                                        for param_list in params.into_iter().rev() {
+                                            for i in 0..frequencies.len() {
+                                                let f = frequencies[i].clone();
+                                                let Atom::Number(_) = f else {
+                                                    return Atom::Error(format!("Unable to read frequency in `{name} (found {f})`"));
+                                                };
+                                                let mut current_params = param_list.clone();
+                                                current_params.push(f);
+                                                current_params.push(Atom::Number(i as f32 * 1. / SAMPLING_RATE));
+                                                frequencies[i] = Atom::List(current_params).eval(env);
+                                            }
                                         }
-                                        Atom::List(return_frequencies)
+                                        Atom::List(frequencies)
                                     }
-                                    _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2, found {})", items.len() - 1)),
+                                    _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 2+, found {})", items.len() - 1)),
                                 }
                             }
-                            "out" => {
+                            "write" => {
+                                match items.len() {
+                                    3 => {
+                                        let Atom::String(ref filename) = items[1].clone() else {
+                                            return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected String"));
+                                        };
+                                        let Atom::List(data) = items[2].clone().eval(env) else {
+                                            return Atom::Error(format!("Argument 2 of `{name}` has incorrect type: expected List"));
+                                        };
+                                        let mut parsed_data = vec![];
+                                        for d in data {
+                                            let Atom::Number(amplitude) = d.eval(env) else {
+                                                return Atom::Error(format!("Unable to read amplitude in `{name} (found {d})`"));
+                                            };
+                                            parsed_data.push(amplitude as i16);
+                                        }
+                                        write_wav(filename, parsed_data);
+                                    }
+                                    _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 3, found {})", items.len() - 1)),
+                                }
                                 return Atom::None;
-                                // match items.len() {
-                                //     4 => {
-                                //         let Atom::String(filename) = items[1].clone() else {
-                                //             return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Number"));
-                                //         };
-                                //         let Atom::List(rendering_function) = items[1].clone() else {
-                                //             return Atom::Error(format!("Argument 1 of `{name}` has incorrect type: expected Number"));
-                                //         };
-                                //     }
-                                //     _ => return Atom::Error(format!("Incorrect number of arguments to `{name}` (expected 3, found {})", items.len() - 1)),
-                                // }
                             }
                             other => {
                                 match env.get(other) {

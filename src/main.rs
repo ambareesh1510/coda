@@ -9,7 +9,7 @@ use repl::repl;
 
 
 fn main() -> io::Result<()> {
-    gen::_write_wav();
+    // gen::_write_wav();
     // return Ok(());
     for (i, arg) in args().enumerate() {
         if i == 1 {
