@@ -57,6 +57,7 @@ impl fmt::Display for Atom {
             Atom::Number(n) => { write!(f, "{}", n) }
             Atom::Boolean(b) => { if *b == true { write!(f, "TRUE") } else { write!(f, "FALSE") } }
             Atom::String(s) => { write!(f, "{}", s) }
+            Atom::Frequency(fr, d) => write!(f, "frequency {}, duration {}", fr, d),
             Atom::Symbol(s) => { write!(f, "{}", s) }
             Atom::List(items) => {
                 let mut s = "(".into();

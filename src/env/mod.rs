@@ -1,5 +1,5 @@
 use crate::eval::Atom;
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 #[derive(Clone, Debug)]
 pub struct SymbolDef {
@@ -67,10 +67,68 @@ pub fn construct_ast(tokens: &[String]) -> (Vec<Atom>, usize) {
             result_vec.push(Atom::String(String::from(
                 &tokens[token_ptr][1..&tokens[token_ptr].len() - 1],
             )));
+        } else if tokens[token_ptr].contains(":") {
+            let mut note = String::from("");
+            let mut octave = 0;
+            let mut num_chars = 0;
+            loop {
+                let next_char = &tokens[token_ptr][num_chars..num_chars + 1];
+                if next_char == ":" {
+                    panic!("Failed to parse note");
+                }
+                if "ABCDEFGR#b".contains(next_char) {
+                    note.push_str(next_char);
+                    num_chars += 1;
+                } else {
+                    break;
+                }
+            }
+            let mut chars_end = num_chars + 1;
+            loop {
+                let next_chars = &tokens[token_ptr][num_chars..chars_end];
+                if let Ok(o) = i32::from_str_radix(next_chars, 10) {
+                    octave = o;
+                    chars_end += 1;
+                } else if &next_chars[next_chars.len() - 1..next_chars.len()] != ":" {
+                    panic!("Failed to parse octave");
+                } else {
+                    break;
+                }
+            }
+            num_chars = chars_end;
+            let Ok(duration) = &tokens[token_ptr][num_chars..].parse::<f32>() else {
+                panic!("Failed to parse duration");
+            };
+            result_vec.push(Atom::List(vec![Atom::Number(calculate_frequency_from_note(&note, octave)), Atom::Number(*duration)]));
         } else {
             result_vec.push(Atom::Symbol(tokens[token_ptr].clone()));
         }
         token_ptr += 1;
     }
     (result_vec, increment)
+}
+
+const A4_FREQUENCY: f32 = 440.0;
+const A4_KEY_NUMBER: i32 = 49;
+
+fn calculate_frequency_from_note(note: &String, octave: i32) -> f32 {
+    let mut key_num: i32 = match note.as_str() {
+        "A" => 1,
+        "A#" | "Bb" => 2,
+        "B" => 3,
+        // C1 starts here, so subtract by one octave
+        "C" => -8,
+        "C#" | "Db" => -7,
+        "D" => -6,
+        "D#" | "Eb" => -5,
+        "E" => -4,
+        "F" => -3,
+        "F#" | "Gb" => -2,
+        "G" => -1,
+        "G#" | "Ab" => 0,
+        "R" => return 0.,
+        _ => panic!("Error parsing note"),
+    };
+    key_num += octave as i32 * 12;
+    A4_FREQUENCY * (2.0f32).powf(1.0 / 12.0 * (key_num - A4_KEY_NUMBER) as f32)
 }

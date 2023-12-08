@@ -9,14 +9,13 @@ use repl::repl;
 
 
 fn main() -> io::Result<()> {
+    gen::_write_wav();
+    // return Ok(());
     for (i, arg) in args().enumerate() {
         if i == 1 {
             println!("{}", arg);
         }
     }
     repl()?;
-    /*
-    gen::write_wav();
-    */
     Ok(())
 }

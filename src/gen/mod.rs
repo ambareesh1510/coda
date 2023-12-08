@@ -11,7 +11,7 @@ pub fn _write_wav() {
     // let new_data = wav::BitDepth::Sixteen(vec![1000; 50000]);
     let mut new_data: Vec<i16> = vec![];
     for i in 0..50000 {
-        new_data.push(((i as f32 / 44100. * 440. * 2. * PI).sin() * 10000.) as i16);
+        new_data.push(((i as f32 / 44100. * 440. * 2. * PI * 50000. / (i as f32 + 50000.)).sin() * 10000.) as i16);
     }
     let new_data = wav::BitDepth::Sixteen(new_data);
     //println!("{:?}", new_data);
